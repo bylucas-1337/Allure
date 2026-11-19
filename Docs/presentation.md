@@ -13,7 +13,7 @@
 | **Public** | Une seule personne : son propriétaire (pas de multi-utilisateurs en V1) |
 | **Coût** | Outils gratuits uniquement : Next.js, Supabase (offre gratuite), Vercel (offre gratuite) |
 | **Langue** | Français |
-| **Statut** | V1.0 « Journal » en construction |
+| **Statut** | **V1.0 « Journal » — terminée et déployée** (`https://allure-orpin-five.vercel.app`) |
 
 ## Le problème
 
@@ -139,7 +139,7 @@ Règles structurantes :
 | Version | Contenu | Statut |
 | --- | --- | --- |
 | **V0** | Squelette : navigation, accueil de démonstration, PWA, design. | ✅ |
-| **V1.0** | Journal : profil, séances course/muscu, accueil réel, historique, ressenti, objectif, `.ics`. | 🚧 |
+| **V1.0** | Journal : profil, séances course/muscu, accueil réel, historique, ressenti, objectif, `.ics`. | ✅ |
 | **V1.5** | Import FIT/GPX, amélioration des stats, export de données. | ⏳ |
 | **V2** | Moteur de plans adaptatifs, règles expliquées, prédictions en fourchettes, charge d'entraînement encadrée. | ⏳ |
 | **Plus tard** | Synchronisation Coros (non officielle), notifications, cyclisme, éventuellement multi-utilisateurs. | 💡 |

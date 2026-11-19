@@ -25,12 +25,12 @@
 
 | | |
 | --- | --- |
-| **Version** | V1.0 « Journal » — étapes 4 à 6 livrées ; Stats et export `.ics` ajoutés (2026-11-19) |
+| **Version** | **V1.0 « Journal » — terminée et déployée** (2026-11-19) |
 | **Date** | 2026-11-19 |
-| **Dernière action** | Saisie et édition course/muscu, accueil réel, check-in + tendance 7 j, Stats, export `.ics` et JSON, migrations V2 à V7 appliquées. |
-| **Prochaine action** | Test réel par Lucas (onboarding 7 étapes, réglages, séances, Stats, .ics), vérification RLS avec un second compte. |
-| **Blocage** | Aucun blocage technique. Reste la validation manuelle avec des données fictives. |
-| **Vérifications** | `npm run typecheck`, `npm run lint` et `npm run build` passent. |
+| **Dernière action** | V1.0 complète : onboarding, réglages, saisie/édition course et muscu, accueil réel, Stats, export `.ics` et JSON, déploiement Vercel réussi. |
+| **Prochaine action** | V1.5 : import FIT/GPX (exports Coros), statistiques enrichies, export des données avancé. |
+| **Blocage** | Aucun. |
+| **Vérifications** | `npm run typecheck`, `npm run lint`, `npm run build` passent ; déploiement Vercel OK (`https://allure-orpin-five.vercel.app`). |
 | **Base** | Migrations V1 à V7 appliquées ; catalogue de 31 exercices présent. |
 
 ## Historique par version
@@ -211,17 +211,22 @@
 
 ## Prochaines étapes
 
-### Maintenant
+### V1.0 — terminée ✅
 
-- [x] **Migrations V2 à V7** appliquées dans Supabase.
-- [x] **Étape 4 — Saisie course** : formulaire durée/distance/allure/ressenti, enregistrement dans `run_sessions`.
-- [x] **Étape 5 — Saisie musculation** : exercices, séries, répétitions, charges.
-- [x] **Étape 6 — Accueil réel** : dernière séance, semaine, check-in du jour, disponibilités.
-- [x] **Stats** : page `/stats` avec résumé, graphique hebdomadaire, allures par type, e1RM par exercice.
-- [x] **Objectif et `.ics`** : export calendrier depuis `/reglages/objectifs`.
-- [ ] **Test réel** par Lucas : onboarding 7 étapes, réglages, séances, Stats, `.ics`, sur mobile et ordinateur.
-- [ ] **Vérification RLS** avec un second compte de test fictif, puis suppression.
-- [ ] **Finitions** : unités, export des données, gestion du compte (réglages restants).
+- [x] **Migrations V1 à V7** appliquées dans Supabase.
+- [x] **Onboarding** 7 étapes, enregistrement par étape, reprise.
+- [x] **Réglages** : profil, course, muscu, poids, santé, objectifs, données.
+- [x] **Saisie et édition** course et musculation, historique, suppression.
+- [x] **Accueil réel** : semaine, dernière séance, check-in + tendance 7 j, compte à rebours objectif.
+- [x] **Stats** : résumé, graphiques, allures, e1RM.
+- [x] **Objectif et `.ics`** : export calendrier.
+- [x] **Export JSON** des données.
+- [x] **Déploiement Vercel** : `https://allure-orpin-five.vercel.app`.
+
+### Ensuite (V1.5)
+
+- [ ] Import FIT/GPX (exports Coros), statistiques enrichies, export avancé.
+- [ ] V2 : moteur de plans adaptatifs, règles documentées, prédictions en fourchettes.
 
 ### Ensuite (V1.0)
 
@@ -260,3 +265,4 @@
 | 2026-11-19 | Étape 6 : accueil réel (résumé semaine, dernière séance, objectifs, check-in quotidien, disponibilités), migration V7 (`daily_checkins`), FC non saisie manuellement. Décision D36. |
 | 2026-11-19 | Ajout page Stats (`/stats`) avec graphiques (distance hebdomadaire, e1RM par exercice), export `.ics` des objectifs, migrations V2 à V7 appliquées, doc mise à jour. |
 | 2026-11-19 | Édition des séances course/muscu dans l'historique, tendance check-in 7 jours sur l'accueil, compte à rebours objectif, export JSON des données. |
+| 2026-11-19 | **V1.0 terminée et déployée** sur Vercel (`https://allure-orpin-five.vercel.app`). Commit « Allure V1.0 ». |
