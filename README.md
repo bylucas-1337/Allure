@@ -14,7 +14,3 @@ npm run lint
 npm run build
 npm run dev
 ```
-
-## Configuration
-
-Les secrets vivent hors du projet dans `C:\Users\lucas\Desktop\Allure-prive\.env`, désigné par la variable système `ALLURE_ENV_FILE`. Voir `Docs/presentation.md` et `Docs/suivi.md` pour le détail. Les migrations SQL sont dans `supabase/migrations/` et s'appliquent à la main dans le SQL Editor de Supabase (V1 à V8).
