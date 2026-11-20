@@ -89,7 +89,30 @@ async function HomeContent() {
         </dl>
       </section>
 
-      {/* Dernière séance */}
+      {/* Prochaine séance prévue */}
+      {data.nextPlannedSession ? (
+        <SectionCard
+          id="prochaine"
+          eyebrow="À venir"
+          title="Prochaine séance prévue"
+          description={
+            data.nextPlannedSession.origin === "engine"
+              ? "Séance proposée par ton plan."
+              : "Séance planifiée manuellement."
+          }
+        >
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-[#23372f]">
+              {data.nextPlannedSession.date} · {data.nextPlannedSession.sport}
+              {data.nextPlannedSession.sessionType ? ` · ${data.nextPlannedSession.sessionType}` : ""}
+            </p>
+            <p className="text-xs text-[#8a9088]">
+              {data.nextPlannedSession.durationMin ? `${data.nextPlannedSession.durationMin} min` : ""}
+              {data.nextPlannedSession.briefText ? ` · ${data.nextPlannedSession.briefText}` : ""}
+            </p>
+          </div>
+        </SectionCard>
+      ) : null}
       <SectionCard
         id="derniere"
         eyebrow="Dernière séance"

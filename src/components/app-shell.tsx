@@ -9,6 +9,7 @@ const navigation = [
   { href: "/ajouter", label: "Ajouter", icon: "add" },
   { href: "/historique", label: "Historique", icon: "history" },
   { href: "/stats", label: "Stats", icon: "stats" },
+  { href: "/plan", label: "Plan", icon: "plan" },
   { href: "/reglages", label: "Réglages", icon: "settings" },
 ] as const;
 
@@ -20,6 +21,7 @@ function NavigationIcon({ name }: { name: IconName }) {
     add: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>,
     history: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5m4-1v5l3 2" /></>,
     stats: <><path d="M4 19V5m0 14h16" /><path d="m7 15 4-4 3 2 5-6" /></>,
+    plan: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.6.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.6-.9l-1.7.7-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.9l-1.4-1.1 1.4-2.4 1.7.7a8 8 0 0 1 1.6-.9l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.6.9l1.7-.7 1.4 2.4-1.4 1.1a7 7 0 0 1 0 1.8Z" /></>,
   };
 

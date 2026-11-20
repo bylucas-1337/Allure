@@ -25,13 +25,13 @@
 
 | | |
 | --- | --- |
-| **Version** | **V1.5 « Import FIT/GPX et statistiques enrichies » — code livré** (2026-11-20) |
+| **Version** | **V2.1 « Génération de plan course » — en cours** (2026-11-20) |
 | **Date** | 2026-11-20 |
-| **Dernière action** | V1.5 : import FIT/GPX (Coros), dédoublonnage, records personnels, zones de FC, stats enrichies, export CSV, migration V8. `typecheck`, `lint`, `build` passent. |
-| **Prochaine action** | Appliquer la migration V8 dans Supabase, tester avec de vrais exports Coros, puis V2 (moteur de plans). |
-| **Blocage** | Aucun côté code. La migration V8 reste à coller dans le SQL Editor pour activer les nouvelles colonnes. |
+| **Dernière action** | V2.1 : page `/plan`, assistant de création, génération 4 semaines glissantes, affichage du plan, arrêt/remplacement, adaptation après chaque séance, prochaine séance dans l'accueil. `typecheck`, `lint`, `build` passent. |
+| **Prochaine action** | Tester la création d'un plan avec un vrai compte, puis V2.2 (adaptation avancée) et V2.3 (charge). |
+| **Blocage** | Aucun côté code. Migration V9 à appliquer dans Supabase pour activer les tables. |
 | **Vérifications** | `npm run typecheck`, `npm run lint`, `npm run build` passent. |
-| **Base** | Migrations V1 à V7 appliquées ; migration V8 écrite, à appliquer ; catalogue de 31 exercices présent. |
+| **Base** | Migrations V1 à V9 écrites (V9 à appliquer) ; catalogue de 31 exercices. |
 
 ## Historique par version
 
@@ -246,6 +246,20 @@
 | D43 | 2026-11-20 | **Sport filtré à l'import** : seules les courses sont acceptées ; un FIT multi-séances n'importe que la première séance de course. | Allure reste un journal course + muscu. |
 | D44 | 2026-11-20 | **Détection du format par extension puis par contenu** ; limites 10 fichiers et 20 Mo par fichier. | Importer même si l'extension a été perdue ; protéger le serveur. |
 | D45 | 2026-11-20 | **Durée et distance plafonnées** (24 h, 500 km) ; validation des fichiers vides ; rapport JSON par fichier. | Éviter des séances aberrantes et donner un retour clair. |
+| D46 | 2026-11-20 | **Ordre V1.5 → V2** : appliquer la migration V8, puis lancer la V2 sans attendre les tests Coros ni la vérification RLS (validation V1.5 en parallèle). | V8 est indispensable pour l'import ; les tests réels restent une tâche de validation, pas un prérequis au code V2. |
+| D47 | 2026-11-20 | **V2 première tranche = course uniquement** ; la musculation reste journal + volume par groupe musculaire. Plan muscu reporté. | L'objectif de course principal structure le programme ; les données importées sont des courses. |
+| D48 | 2026-11-20 | **Planification via `planned_sessions`** : séances proposées (origine `plan`), déplaçables, sautables, avec recalcul et explication. | « Le plan propose, l'utilisateur décide » : une séance peut être déplacée/sautée, le moteur recalcule et explique. |
+| D49 | 2026-11-20 | **Charge = TRIMP (FC) dans Stats**, score encadré et documenté (D13), pas de score opaque sur l'accueil ; données détaillées dans Stats. | Charge mesurable quand la FC est disponible (import), transparente, sans boîte noire. |
+| D50 | 2026-11-20 | **Prédiction = VDOT** à partir des records (importés ou saisis), allures d'entraînement en fourchettes. | Transparence sur les limites ; honnêteté (D13). |
+| D51 | 2026-11-20 | **Notifications = push PWA** pour les séances prévues. | Cohérent avec la PWA existante, sans service tiers. |
+| D52 | 2026-11-20 | **Backup complet restaurable** avant la V2 (export/import complet de la base). | Permet de restaurer l'état avant d'introduire le moteur. |
+| D53 | 2026-11-20 | **Migration V9 avec nouvelles tables dédiées** : `training_plans` (+ règles/séances liées) ; `planned_sessions` garde son rôle d'agenda. | Séparer le plan (stratégie) de l'agenda (exécution) pour recalculer sans perdre l'historique. |
+| D55 | 2026-11-20 | **Page dédiée `/plan`** pour créer, voir, arrêter et supprimer un plan d'entraînement. | Point d'entrée unique et lisible, cohérent avec les sous-pages de réglages. |
+| D56 | 2026-11-20 | **Assistant en étapes** pour la création d'un plan (objectif, niveau/VDOT, disponibilités, volume, confirmation). | Cohérent avec l'onboarding ; chaque étape reste courte. |
+| D57 | 2026-11-20 | **Fenêtre glissante de 4 semaines** : le moteur maintient les 4 prochaines semaines. | Évite les données obsolètes ; recalcul à chaque séance. |
+| D58 | 2026-11-20 | **Adaptation automatique après chaque séance** : le moteur recalcule la fenêtre glissante en fonction des stats/infos de la séance. « Régénérer » = arrêter le plan en cours et en créer un nouveau. | Le plan reste vivant et adapté sans action manuelle ; l'utilisateur garde le contrôle via l'arrêt. |
+| D59 | 2026-11-20 | **Arrêt d'un plan** : supprime les séances futures planifiées, garde l'historique des séances faites, plan passe en `abandoned`. | Préserve l'historique ; l'utilisateur peut ensuite créer un nouveau plan. |
+| D60 | 2026-11-20 | **Le plan s'affiche dans l'accueil** : prochaine séance prévue (manuelle ou moteur) + compte à rebours objectif. | Cohérent avec l'accueil réel existant. |
 
 ## Prochaines étapes
 
@@ -273,8 +287,24 @@
 
 ### Ensuite (V2)
 
-- [ ] Moteur de plans adaptatifs, règles documentées, prédictions en fourchettes, charge encadrée.
-- [ ] Synchronisation Coros non officielle, notifications, cyclisme.
+**Restes V1.5 (validation, en parallèle)**
+- [ ] Appliquer la migration V8 dans Supabase (action manuelle).
+- [ ] Valider avec de vrais exports Coros (FIT puis GPX), y compris activités multi-séances et avec FC.
+- [ ] Vérifier la RLS avec un second compte après la migration V8.
+
+**V2 — moteur de plans adaptatifs (course d'abord)**
+- [x] **Backup complet restaurable** (export/import complet de la base) avant d'introduire le moteur (D52).
+- [x] **Règles scientifiques** : brouillon documenté dans `Docs/moteur-v2-regles.md` (base, limites, garde-fous), à valider par Lucas (D54).
+- [ ] **Migration V9** : tables dédiées `training_plans` + `plan_rules` + `plan_sessions` ; `planned_sessions` garde son rôle d'agenda (D53). Fichier écrit (mis à jour selon les règles validées), à appliquer dans Supabase.
+- [ ] **Validation des règles** par Lucas (points à valider dans `Docs/moteur-v2-regles.md` §13).
+- [x] **V2.1 — Génération d'un plan course hebdomadaire** basé sur l'objectif principal, les disponibilités et le niveau (VDOT) ; séances proposées dans `planned_sessions` (D47, D48, D55–D60).
+- [ ] **V2.2 — Adaptation/recalcul** : séance déplacée ou sautée → recalcule et explique (D48).
+- [ ] **V2.3 — Charge encadrée** : TRIMP (FC) dans Stats, allures cibles en fourchettes via VDOT (D49, D50).
+- [ ] **V2.4 — Notifications push PWA** pour les séances prévues (D51).
+
+**Plus tard (hors V2 première tranche)**
+- [ ] Plan de musculation par groupe/volume (Schoenfeld).
+- [ ] Synchronisation Coros non officielle, cyclisme, multi-utilisateurs.
 
 ## Questions ouvertes
 
@@ -282,14 +312,18 @@
 - Isolation renforcée : compte Windows séparé pour l'agent (non fait).
 - Date et nom du déploiement Vercel.
 - Vérifier les conditions des offres gratuites Supabase et Vercel avant mise en ligne (limites, mise en pause, usage personnel).
-- Canal des futures notifications : push PWA ou email.
 - Détail de l'import FIT/GPX : exports Coros, fuseaux, gestion des doublons — premier flux livré en V1.5, à valider avec de vrais exports.
-- Choix du modèle de calcul de charge en V2 (à documenter et encadrer).
-- Stratégie de sauvegarde/export des données avant la V2.
+- **Résolu (D49)** : charge = TRIMP (FC) dans Stats.
+- **Résolu (D50)** : prédiction = VDOT + records.
+- **Résolu (D51)** : notifications = push PWA.
+- **Résolu (D52)** : sauvegarde = backup complet restaurable avant V2.
+- **Résolu (D53)** : schéma V9 = nouvelles tables dédiées.
 - **Priorité d'objectif** : pas de champ dédié, un seul objectif principal actif fait office de priorité. À ajouter seulement si plusieurs objectifs principaux deviennent nécessaires.
 - Objectif physique (`sport = 'body'`) et objectifs par exercice : schéma prêt, écrans à faire.
 - Changer un objectif principal en course secondaire (ou l'inverse) : se fait aujourd'hui par suppression puis recréation.
-- RLS : vérification avec un second compte à refaire après la migration V2.
+- **Résolu (V2.1)** : plan générique si pas d'objectif principal (sans affûtage).
+- Règles scientifiques du moteur à rédiger et valider avant code (D54).
+- RLS : vérification avec un second compte à refaire après la migration V8 et V9.
 
 ## Journal des mises à jour de ce document
 
@@ -302,3 +336,5 @@
 | 2026-11-19 | Édition des séances course/muscu dans l'historique, tendance check-in 7 jours sur l'accueil, compte à rebours objectif, export JSON des données. |
 | 2026-11-19 | **V1.0 terminée et déployée** sur Vercel (`https://allure-orpin-five.vercel.app`). Commit « Allure V1.0 ». |
 | 2026-11-20 | **V1.5 livrée** : import FIT/GPX (Coros), dédoublonnage, records et zones FC, stats enrichies, export CSV, migration V8. Décisions D37–D45. `typecheck`, `lint`, `build` passent. |
+| 2026-11-20 | **Cadrage V2** : décisions D46–D54 (ordre V1.5→V2, course d'abord, planification via `planned_sessions`, charge TRIMP, VDOT, push PWA, backup complet, migration V9, règles à valider). Documentation mise à jour. |
+| 2026-11-20 | **V2.1 livrée** : page `/plan`, assistant de création, génération 4 semaines glissantes (VDOT, allures, volume, structure, affûtage), affichage du plan avec règles, arrêt/remplacement, adaptation après chaque séance, prochaine séance dans l'accueil. Décisions D55–D60. `typecheck`, `lint`, `build` passent. |

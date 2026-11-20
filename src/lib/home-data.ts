@@ -25,6 +25,14 @@ export type HomeData = {
   todayCheckin: { form: number | null; fatigue: number | null; pain: string; notes: string } | null;
   recentCheckins: { date: string; form: number | null; fatigue: number | null; pain: string }[];
   todayIso: string;
+  nextPlannedSession: {
+    date: string;
+    sport: string;
+    sessionType: string | null;
+    durationMin: number | null;
+    origin: string;
+    briefText: string | null;
+  } | null;
 };
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -50,6 +58,7 @@ export async function getHomeData(): Promise<HomeData> {
     todayCheckin: null,
     recentCheckins: [],
     todayIso: new Date().toISOString().slice(0, 10),
+    nextPlannedSession: null,
   };
 
   const supabase = await createSupabaseServerClient();
@@ -71,7 +80,7 @@ export async function getHomeData(): Promise<HomeData> {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   const sevenDaysAgoIso = sevenDaysAgo.toISOString().slice(0, 10);
 
-  const [profileResult, weightResult, runsResult, strengthsResult, goalsResult, checkinResult, recentCheckinsResult] =
+  const [profileResult, weightResult, runsResult, strengthsResult, goalsResult, checkinResult, recentCheckinsResult, plannedResult] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -148,6 +157,22 @@ export async function getHomeData(): Promise<HomeData> {
         .gte("checkin_date", sevenDaysAgoIso)
         .order("checkin_date", { ascending: true })
         .returns<{ checkin_date: string; form: number | null; fatigue: number | null; pain: string | null }[]>(),
+      supabase
+        .from("planned_sessions")
+        .select("date, sport, session_type, duration_min, origin, brief_text")
+        .eq("user_id", userId)
+        .eq("status", "planned")
+        .gte("date", todayIso)
+        .order("date", { ascending: true })
+        .limit(1)
+        .maybeSingle<{
+          date: string;
+          sport: string;
+          session_type: string | null;
+          duration_min: number | null;
+          origin: string;
+          brief_text: string | null;
+        }>(),
     ]);
 
   const profile = profileResult.data;
@@ -233,5 +258,15 @@ export async function getHomeData(): Promise<HomeData> {
       pain: row.pain ?? "",
     })),
     todayIso,
+    nextPlannedSession: plannedResult.data
+      ? {
+          date: plannedResult.data.date,
+          sport: plannedResult.data.sport,
+          sessionType: plannedResult.data.session_type,
+          durationMin: plannedResult.data.duration_min,
+          origin: plannedResult.data.origin,
+          briefText: plannedResult.data.brief_text,
+        }
+      : null,
   };
 }

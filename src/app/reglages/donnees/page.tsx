@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BackupRestoreForm } from "@/components/settings/backup-restore-form";
 import { ResetOnboardingForm } from "@/components/settings/reset-onboarding-form";
 import { SectionCard } from "@/components/settings/settings-ui";
 
@@ -51,6 +52,22 @@ async function Content() {
         >
           Ouvrir l&apos;import FIT/GPX
         </Link>
+      </SectionCard>
+      <SectionCard
+        id="backup"
+        eyebrow="Sauvegarde"
+        title="Sauvegarde complète (restaurable)"
+        description="Télécharge l'ensemble de tes données dans un seul fichier JSON, puis restaure-le ici si besoin. La restauration remplace les données existantes."
+      >
+        <a
+          href="/api/backup"
+          className="inline-flex items-center rounded-xl bg-[#6f9c7d] px-4 py-2 text-sm font-semibold text-white"
+        >
+          Télécharger la sauvegarde complète
+        </a>
+        <div className="mt-4">
+          <BackupRestoreForm />
+        </div>
       </SectionCard>
       <SectionCard
         id="donnees"

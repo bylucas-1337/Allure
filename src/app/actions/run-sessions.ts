@@ -46,25 +46,39 @@ export async function saveRunSessionAction(formData: FormData) {
   const avgPace = distanceKm === null ? null : paceSecondsPerKm(totalSec, distanceKm);
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("run_sessions").insert({
-    user_id: userId,
-    session_date: input.sessionDate,
-    session_type: input.sessionType,
-    duration_min: duration,
-    duration_sec: sec,
-    distance_m: distanceM,
-    avg_pace_sec: avgPace,
-    rpe: input.rpe === "" ? null : Number(input.rpe),
-    notes: input.notes === "" ? null : input.notes,
-    goal_id: input.goalId === "" ? null : input.goalId,
-  });
+  const { data: inserted, error } = await supabase
+    .from("run_sessions")
+    .insert({
+      user_id: userId,
+      session_date: input.sessionDate,
+      session_type: input.sessionType,
+      duration_min: duration,
+      duration_sec: sec,
+      distance_m: distanceM,
+      avg_pace_sec: avgPace,
+      rpe: input.rpe === "" ? null : Number(input.rpe),
+      notes: input.notes === "" ? null : input.notes,
+      goal_id: input.goalId === "" ? null : input.goalId,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !inserted) {
     return { ok: false, errors: { form: WRITE_ERROR } };
+  }
+
+  // Adapter le plan actif (si présent) en arrière-plan.
+  try {
+    const { adaptPlanAfterSession } = await import("@/app/actions/plan");
+    await adaptPlanAfterSession(inserted.id);
+  } catch {
+    // Ne pas bloquer la réponse si l'adaptation échoue.
   }
 
   revalidatePath("/ajouter");
   revalidatePath("/historique");
+  revalidatePath("/plan");
+  revalidatePath("/");
   return { ok: true };
 }
 
