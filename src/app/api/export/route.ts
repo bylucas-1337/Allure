@@ -21,7 +21,17 @@ export async function GET() {
   ]);
 
   const payload = {
+    app: "Allure",
+    schemaVersion: "V1.5",
     exportedAt: new Date().toISOString(),
+    counts: {
+      weightEntries: weights.data?.length ?? 0,
+      injuries: injuries.data?.length ?? 0,
+      goals: goals.data?.length ?? 0,
+      runSessions: runs.data?.length ?? 0,
+      strengthSessions: strengths.data?.length ?? 0,
+      dailyCheckins: checkins.data?.length ?? 0,
+    },
     profile: profile.data,
     weightEntries: weights.data ?? [],
     injuries: injuries.data ?? [],

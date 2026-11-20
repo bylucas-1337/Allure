@@ -9,7 +9,7 @@
 > - Chaque mise à jour précise la **date** et, si possible, la **version** concernée.
 > - Aucune donnée réelle ni aucun secret dans ce fichier.
 >
-> *Dernière mise à jour : 2026-11-19.*
+> *Dernière mise à jour : 2026-11-20.*
 
 ## Légende
 
@@ -25,13 +25,13 @@
 
 | | |
 | --- | --- |
-| **Version** | **V1.0 « Journal » — terminée et déployée** (2026-11-19) |
-| **Date** | 2026-11-19 |
-| **Dernière action** | V1.0 complète : onboarding, réglages, saisie/édition course et muscu, accueil réel, Stats, export `.ics` et JSON, déploiement Vercel réussi. |
-| **Prochaine action** | V1.5 : import FIT/GPX (exports Coros), statistiques enrichies, export des données avancé. |
-| **Blocage** | Aucun. |
-| **Vérifications** | `npm run typecheck`, `npm run lint`, `npm run build` passent ; déploiement Vercel OK (`https://allure-orpin-five.vercel.app`). |
-| **Base** | Migrations V1 à V7 appliquées ; catalogue de 31 exercices présent. |
+| **Version** | **V1.5 « Import FIT/GPX et statistiques enrichies » — code livré** (2026-11-20) |
+| **Date** | 2026-11-20 |
+| **Dernière action** | V1.5 : import FIT/GPX (Coros), dédoublonnage, records personnels, zones de FC, stats enrichies, export CSV, migration V8. `typecheck`, `lint`, `build` passent. |
+| **Prochaine action** | Appliquer la migration V8 dans Supabase, tester avec de vrais exports Coros, puis V2 (moteur de plans). |
+| **Blocage** | Aucun côté code. La migration V8 reste à coller dans le SQL Editor pour activer les nouvelles colonnes. |
+| **Vérifications** | `npm run typecheck`, `npm run lint`, `npm run build` passent. |
+| **Base** | Migrations V1 à V7 appliquées ; migration V8 écrite, à appliquer ; catalogue de 31 exercices présent. |
 
 ## Historique par version
 
@@ -175,6 +175,35 @@
 | 11 | Réglages | Fait en étape 3 bis : profil, poids, blessures, objectifs, préférences muscu. Reste : unités, export des données, gestion du compte. |
 | 12 | Finitions et déploiement | Vérifications PWA, accessibilité, Vercel, URL Supabase de production. |
 
+### V1.5 — Import FIT/GPX et statistiques enrichies — ✅ (2026-11-20)
+
+**Objectif** : importer une séance de course depuis un export Coros (FIT/GPX), calculer records, zones de FC et charge utile aux stats, et enrichir l'analyse et l'export des données.
+
+**Livré**
+
+- Migration V8 (`supabase/migrations/20261120000000_v8_run_import.sql`) : provenance et métadonnées d'import, mesures issues des fichiers, records calculés, zones de FC, index unique sur `(user_id, import_key)`, élargissement de la borne de durée.
+- Import FIT côté serveur avec `fit-file-parser` ; GPX parsé en interne ; détection du format par extension puis par contenu.
+- Page `/importer` et formulaire client : plusieurs fichiers à la fois (10 max, 20 Mo par fichier), rapport fichier par fichier, mode « importer quand même ».
+- Dédoublonnage par SHA-256 du fichier puis détection d'une séance très proche (même date, distance et durée à 2 % près).
+- Records personnels sur 1 km, 5 km, 10 km, semi et marathon, mesurés depuis les points de piste ; zones de FC à partir de la FC max estimée par l'âge (220 − âge).
+- Statistiques enrichies : filtre par période, records personnels, progression mensuelle de l'e1RM, volume par groupe musculaire, temps par zone de FC, comparaison 30 j / 30 j précédents.
+- Export avancé : JSON enrichi (en-tête, compteurs) et CSV par jeu de données (course, musculation, poids, check-ins), séparateur point-virgule avec BOM UTF-8.
+- Lien d'import depuis `/ajouter` et `/reglages/donnees`.
+- Avertissement clair si la migration V8 n'est pas appliquée (stats et import).
+- Décisions D37 à D45.
+
+**Reste à faire**
+
+- Appliquer la migration V8 dans Supabase.
+- Valider avec de vrais exports Coros (FIT puis GPX), y compris activités multi-séances et avec FC.
+- Vérifier la RLS avec un second compte après la migration V8.
+
+**Volontairement laissé de côté**
+
+- Import de musculation (seules les courses sont importées).
+- Synchronisation automatique Coros (toujours manuelle via fichier).
+- Calcul de charge d'entraînement et moteur de plans (V2).
+
 ## Décisions
 
 > Résumé. Le détail daté (décision + raison complète) se trouve dans [`../DECISIONS.md`](../DECISIONS.md). Toute nouvelle décision doit être ajoutée **dans les deux fichiers**.
@@ -208,6 +237,15 @@
 | D25 | 2026-11-19 | **Un objectif principal + autant de courses secondaires actives que nécessaire** ; pas de champ « priorité » numérique. | Correspond au besoin réel : une course majeure, des courses de passage qui ne l'effacent pas. |
 | D26 | 2026-11-19 | **La page Réglages est le lieu unique de modification** ; l'onboarding recueille les mêmes préférences muscu dès l'étape 2. | Éviter la double saisie et rendre toute donnée réparable sans passer par la base. |
 | D27 | 2026-11-19 | **Champs muscu limités à ce qui pilote un programme** (intention, groupes, matériel, durée, fréquence), avec références scientifiques citées. | Ne pas transformer le profil en questionnaire ; le détail des exercices appartient à la séance et au moteur V2. |
+| D37 | 2026-11-20 | **Migration V8** : `run_sessions` gagne source, import_key, imported_at, mesures (FC, D+, calories, temps), best_efforts, hr_zones ; durée élargie à 0–1440 min ; index unique sur `(user_id, import_key)`. | Stocker les mesures issues des fichiers sans table dédiée. |
+| D38 | 2026-11-20 | **`fit-file-parser` côté serveur** pour les FIT ; GPX parsé en interne ; fichier d'origine jamais conservé. | Zéro dépendance lourde ; pas de stockage de données personnelles brutes. |
+| D39 | 2026-11-20 | **Dédoublonnage en deux temps** : SHA-256 du fichier puis séance très proche (date + distance/durée à 2 %) ; mode « importer quand même ». | Éviter les doublons accidentels sans bloquer un vrai second import. |
+| D40 | 2026-11-20 | **Records calculés à l'import** (1 km, 5 km, 10 km, semi, marathon) ; zones de FC à partir de la FC max estimée par l'âge (220 − âge). Records déduits marqués « estimé ». | Repères mesurés si fichier ; honnêteté sinon. |
+| D41 | 2026-11-20 | **Statistiques enrichies** : filtre par période, records, progression mensuelle e1RM, volume par groupe, zones FC, comparaison 30 j. | Exploiter les données importées et saisies sans moteur de plans. |
+| D42 | 2026-11-20 | **Export avancé** : JSON enrichi (en-tête, compteurs) + CSV par jeu de données, séparateur `;` avec BOM UTF-8. | Lisible dans un tableur français, sans service tiers. |
+| D43 | 2026-11-20 | **Sport filtré à l'import** : seules les courses sont acceptées ; un FIT multi-séances n'importe que la première séance de course. | Allure reste un journal course + muscu. |
+| D44 | 2026-11-20 | **Détection du format par extension puis par contenu** ; limites 10 fichiers et 20 Mo par fichier. | Importer même si l'extension a été perdue ; protéger le serveur. |
+| D45 | 2026-11-20 | **Durée et distance plafonnées** (24 h, 500 km) ; validation des fichiers vides ; rapport JSON par fichier. | Éviter des séances aberrantes et donner un retour clair. |
 
 ## Prochaines étapes
 
@@ -223,22 +261,19 @@
 - [x] **Export JSON** des données.
 - [x] **Déploiement Vercel** : `https://allure-orpin-five.vercel.app`.
 
-### Ensuite (V1.5)
+### V1.5 — livrée ✅ (2026-11-20)
 
-- [ ] Import FIT/GPX (exports Coros), statistiques enrichies, export avancé.
-- [ ] V2 : moteur de plans adaptatifs, règles documentées, prédictions en fourchettes.
+- [x] **Migration V8** écrite (`supabase/migrations/20261120000000_v8_run_import.sql`), à appliquer dans Supabase.
+- [x] **Import FIT/GPX** : page `/importer`, formulaire multi-fichiers, rapport par fichier.
+- [x] **Dédoublonnage** par hash SHA-256 et par séance proche, avec mode « importer quand même ».
+- [x] **Records personnels** et **zones de FC** calculés à l'import.
+- [x] **Statistiques enrichies** : période, records, progression e1RM, volume par groupe, zones FC, comparaison.
+- [x] **Export avancé** : JSON enrichi + CSV par jeu de données.
+- [x] `typecheck`, `lint`, `build` passent.
 
-### Ensuite (V1.0)
+### Ensuite (V2)
 
-- [ ] Étapes 4 à 7 : ajout course, ajout muscu, accueil réel, historique.
-- [ ] Étapes 8 à 10 : ressenti/check-in, objectif + `.ics`, statistiques.
-- [ ] Étape 11 : restes des réglages (unités, export des données, compte).
-- [ ] Étape 12 : vérifications finales et déploiement Vercel.
-
-### Après la V1.0
-
-- [ ] **V1.5** : import FIT/GPX (exports Coros), statistiques enrichies, export des données.
-- [ ] **V2** : moteur de plans adaptatifs, règles documentées, prédictions en fourchettes, charge encadrée.
+- [ ] Moteur de plans adaptatifs, règles documentées, prédictions en fourchettes, charge encadrée.
 - [ ] Synchronisation Coros non officielle, notifications, cyclisme.
 
 ## Questions ouvertes
@@ -248,7 +283,7 @@
 - Date et nom du déploiement Vercel.
 - Vérifier les conditions des offres gratuites Supabase et Vercel avant mise en ligne (limites, mise en pause, usage personnel).
 - Canal des futures notifications : push PWA ou email.
-- Détail de l'import FIT/GPX : exports Coros, fuseaux, gestion des doublons.
+- Détail de l'import FIT/GPX : exports Coros, fuseaux, gestion des doublons — premier flux livré en V1.5, à valider avec de vrais exports.
 - Choix du modèle de calcul de charge en V2 (à documenter et encadrer).
 - Stratégie de sauvegarde/export des données avant la V2.
 - **Priorité d'objectif** : pas de champ dédié, un seul objectif principal actif fait office de priorité. À ajouter seulement si plusieurs objectifs principaux deviennent nécessaires.
@@ -266,3 +301,4 @@
 | 2026-11-19 | Ajout page Stats (`/stats`) avec graphiques (distance hebdomadaire, e1RM par exercice), export `.ics` des objectifs, migrations V2 à V7 appliquées, doc mise à jour. |
 | 2026-11-19 | Édition des séances course/muscu dans l'historique, tendance check-in 7 jours sur l'accueil, compte à rebours objectif, export JSON des données. |
 | 2026-11-19 | **V1.0 terminée et déployée** sur Vercel (`https://allure-orpin-five.vercel.app`). Commit « Allure V1.0 ». |
+| 2026-11-20 | **V1.5 livrée** : import FIT/GPX (Coros), dédoublonnage, records et zones FC, stats enrichies, export CSV, migration V8. Décisions D37–D45. `typecheck`, `lint`, `build` passent. |

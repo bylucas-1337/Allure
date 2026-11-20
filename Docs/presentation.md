@@ -13,7 +13,7 @@
 | **Public** | Une seule personne : son propriétaire (pas de multi-utilisateurs en V1) |
 | **Coût** | Outils gratuits uniquement : Next.js, Supabase (offre gratuite), Vercel (offre gratuite) |
 | **Langue** | Français |
-| **Statut** | **V1.0 « Journal » — terminée et déployée** (`https://allure-orpin-five.vercel.app`) |
+| **Statut** | **V1.5 « Import FIT/GPX et statistiques enrichies » — code livré** (migration V8 à appliquer) |
 
 ## Le problème
 
@@ -56,9 +56,16 @@ Cinq principes directeurs :
 - Connexion à un compte unique, pages protégées, déconnexion.
 - Installation PWA et page de secours hors ligne.
 
-### Explicitement hors V1.0
+### Inclus en V1.5
 
-- Import de fichiers FIT/GPX et synchronisation Coros (prévus en V1.5/V2).
+- Import de fichiers FIT/GPX (exports Coros) avec dédoublonnage.
+- Records personnels et zones de fréquence cardiaque calculés à l'import.
+- Statistiques enrichies : période, records, progression e1RM, volume par groupe, zones FC, comparaison.
+- Export avancé : JSON enrichi et CSV par jeu de données.
+
+### Explicitement hors V1.5
+
+- Synchronisation automatique Coros.
 - Génération automatique de plans, VDOT et prédictions de performance.
 - Notifications push, cyclisme, Strava, multi-utilisateurs.
 - Tout calcul de charge d'entraînement opaque.
@@ -140,7 +147,7 @@ Règles structurantes :
 | --- | --- | --- |
 | **V0** | Squelette : navigation, accueil de démonstration, PWA, design. | ✅ |
 | **V1.0** | Journal : profil, séances course/muscu, accueil réel, historique, ressenti, objectif, `.ics`. | ✅ |
-| **V1.5** | Import FIT/GPX, amélioration des stats, export de données. | ⏳ |
+| **V1.5** | Import FIT/GPX, amélioration des stats, export de données. | ✅ |
 | **V2** | Moteur de plans adaptatifs, règles expliquées, prédictions en fourchettes, charge d'entraînement encadrée. | ⏳ |
 | **Plus tard** | Synchronisation Coros (non officielle), notifications, cyclisme, éventuellement multi-utilisateurs. | 💡 |
 

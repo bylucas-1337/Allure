@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { getRunSessionsData } from "@/lib/run-sessions-data";
 import { RunSessionForm } from "@/components/run/session-form";
@@ -20,9 +21,23 @@ async function AjouterContent() {
           Ajouter une séance
         </h1>
         <p className="mt-3 text-sm leading-6 text-[#747a72]">
-          Saisie manuelle. La synchronisation Strava viendra dans une prochaine version.
+          Saisie manuelle, ou import d&apos;une activité FIT/GPX exportée depuis Coros.
         </p>
       </header>
+
+      <SectionCard
+        id="import"
+        eyebrow="Course"
+        title="Importer une activité"
+        description="Un fichier .fit ou .gpx remplit la séance, les records et les zones de FC sans ressaisie."
+      >
+        <Link
+          href="/importer"
+          className="inline-flex min-h-11 items-center rounded-xl bg-[#245642] px-5 text-sm font-bold text-white transition hover:bg-[#173d35]"
+        >
+          Importer un fichier FIT ou GPX
+        </Link>
+      </SectionCard>
 
       <SectionCard
         id="course"

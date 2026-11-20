@@ -76,12 +76,26 @@ Il est mis à jour à chaque session. Les points encore ouverts sont listés à 
 | --- | --- | --- |
 | D36 | **Pas de saisie manuelle de la FC** : la FC moyenne viendra de la synchro Strava (V2). L'accueil se contente du profil (FC de repos) et des séances. | Éviter une saisie manuelle fastidieuse et peu fiable. |
 
+## 2026-11-20 — Import FIT/GPX et statistiques enrichies (V1.5)
+
+| # | Décision | Raison |
+| --- | --- | --- |
+| D37 | **Migration V8** (`supabase/migrations/20261120000000_v8_run_import.sql`) : `run_sessions` gagne `source`, `import_key`, `imported_at`, `avg_hr`, `max_hr`, `elevation_gain_m`, `calories`, `moving_time_sec`, `elapsed_time_sec`, `best_efforts` (jsonb), `hr_zones` (jsonb). `duration_min` est élargi à 0–1440 minutes. Index unique `(user_id, import_key)` quand `import_key` est présent. | Le schéma V4 ne stockait que durée/distance/allure. L'import apporte des mesures supplémentaires à réutiliser dans les stats sans table dédiée. |
+| D38 | **`fit-file-parser` côté serveur** pour les FIT ; **GPX parsé en interne** avec un parseur léger. Le fichier d'origine n'est jamais conservé ; seules les mesures dérivées sont enregistrées. | Zéro dépendance lourde, une seule bibliothèque MIT pour le format binaire ; pas de stockage de données personnelles brutes. |
+| D39 | **Dédoublonnage en deux temps** : SHA-256 du fichier (`import_key`) puis détection d'une séance très proche (même date, distance et durée à 2 % près). Un mode « importer quand même » outrepasse les deux. | Évite les doublons accidentels sans bloquer un vrai second import ; l'override reste explicite. |
+| D40 | **Records personnels calculés à l'import** (meilleur temps sur 1 km, 5 km, 10 km, semi, marathon) à partir des points de piste ; **zones de FC** à partir de la FC max estimée par l'âge (220 − âge). Les records déduits de l'allure moyenne d'une séance manuelle sont marqués « estimé ». | Donner des repères mesurés quand un fichier existe, sans inventer de valeur ; rester honnête quand il n'y a que la saisie. |
+| D41 | **Statistiques enrichies** : filtre par période (30 j, 90 j, 1 an, tout), records personnels, progression mensuelle de l'e1RM, volume par groupe musculaire, temps par zone de FC, comparaison 30 j contre 30 j précédents. | Exploiter les données importées et les séries saisies sans moteur de plans ; tout reste calculé depuis les séances réelles. |
+| D42 | **Export avancé** : l'export JSON gagne un en-tête (`app`, `schemaVersion`, `counts`) et un export **CSV** par jeu de données (course, musculation, poids, check-ins), séparateur point-virgule avec BOM UTF-8. | Lisible directement dans un tableur français ; pas de dépendance à un service tiers. |
+| D43 | **Sport filtré à l'import** : seules les activités de course sont acceptées ; un FIT multi-séances n'importe que la première séance de course. | Allure reste un journal course + muscu ; importer du vélo ou de la natation fausserait les stats. |
+| D44 | **Détection du format par extension puis par contenu** (signature FIT `.FIT`, début `<` pour le GPX). Limite : 10 fichiers et 20 Mo par fichier. | Permet d'importer même si l'extension a été perdue ; protège le serveur. |
+| D45 | **Durée et distance plafonnées** (24 h, 500 km) et validation des fichiers vides ou sans horodatage. Les erreurs sont renvoyées par fichier dans un rapport JSON. | Éviter d'enregistrer des séances aberrantes et donner un retour clair fichier par fichier. |
+
 ## Points ouverts
 
 - Fuseau horaire de référence : `Europe/Paris` par défaut, à confirmer.
 - Isolation renforcée : compte Windows séparé pour l'agent (non fait).
 - Date et nom du déploiement Vercel.
-- Vérifier les conditions des offres gratuites Supabase et Vercel avant mise en ligne (limites, mise en pause, usage personnel).
+- RLS : vérification avec un second compte à refaire après la migration V8.
 - Canal des futures notifications : push PWA ou email.
-- Détail de l'import FIT/GPX (exports Coros, fuseaux, doublons).
+- Détail de l'import FIT/GPX (exports Coros, fuseaux, doublons) : premier flux livré, à valider avec des exports réels.
 - Choix du modèle de calcul de charge en V2 (à documenter et encadrer).
