@@ -27,7 +27,7 @@
 | --- | --- |
 | **Version** | **V2.1 « Génération de plan course » — en cours** (2026-11-20) |
 | **Date** | 2026-11-20 |
-| **Dernière action** | V2.1 : page `/plan`, assistant de création, génération 4 semaines glissantes, affichage du plan, arrêt/remplacement, adaptation après chaque séance, prochaine séance dans l'accueil. `typecheck`, `lint`, `build` passent. |
+| **Dernière action** | V2.1 amélioré : assistant de création interactif (objectif, niveau, disponibilités, volume) au lieu d'un renvoi vers les réglages. `createPlanInteractive` crée l'objectif + met à jour le profil + génère le plan. `typecheck`, `lint`, `build` passent. |
 | **Prochaine action** | Tester la création d'un plan avec un vrai compte, puis V2.2 (adaptation avancée) et V2.3 (charge). |
 | **Blocage** | Aucun côté code. Migration V9 à appliquer dans Supabase pour activer les tables. |
 | **Vérifications** | `npm run typecheck`, `npm run lint`, `npm run build` passent. |
@@ -337,4 +337,4 @@
 | 2026-11-19 | **V1.0 terminée et déployée** sur Vercel (`https://allure-orpin-five.vercel.app`). Commit « Allure V1.0 ». |
 | 2026-11-20 | **V1.5 livrée** : import FIT/GPX (Coros), dédoublonnage, records et zones FC, stats enrichies, export CSV, migration V8. Décisions D37–D45. `typecheck`, `lint`, `build` passent. |
 | 2026-11-20 | **Cadrage V2** : décisions D46–D54 (ordre V1.5→V2, course d'abord, planification via `planned_sessions`, charge TRIMP, VDOT, push PWA, backup complet, migration V9, règles à valider). Documentation mise à jour. |
-| 2026-11-20 | **V2.1 livrée** : page `/plan`, assistant de création, génération 4 semaines glissantes (VDOT, allures, volume, structure, affûtage), affichage du plan avec règles, arrêt/remplacement, adaptation après chaque séance, prochaine séance dans l'accueil. Décisions D55–D60. `typecheck`, `lint`, `build` passent. |
+| 2026-11-21 | **V2.1 amélioré** : assistant de création interactif (saisie de l'objectif, de l'allure facile, des disponibilités et du volume) au lieu d'un renvoi vers les réglages. Nouvelle action `createPlanInteractive`. `typecheck`, `lint`, `build` passent. |

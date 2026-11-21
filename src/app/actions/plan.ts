@@ -14,6 +14,249 @@ export type CreatePlanInput = {
   // Données profil (déjà dans la base, mais on les passe pour le calcul)
 };
 
+export type CreatePlanInteractiveInput = {
+  raceName: string;
+  distanceKm: number;
+  raceDate: string;
+  targetTimeSec: number | null;
+  easyPaceSecPerKm: number | null;
+  runDays: string[];
+  longRunDay: string;
+  baselineKm: number;
+  maxKm: number;
+};
+
+export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
+  const supabase = await createSupabaseServerClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return { error: "Non autorisé" };
+  const userId = userData.user.id;
+
+  // Vérifier qu'il n'y a pas déjà un plan actif.
+  const { data: existing } = await supabase
+    .from("training_plans")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .limit(1);
+  if (existing && existing.length > 0) {
+    return { error: "Un plan est déjà actif. Arrête-le d'abord." };
+  }
+
+  // 1. Créer l'objectif principal (abandonner l'ancien).
+  const { data: oldGoal } = await supabase
+    .from("goals")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .eq("goal_kind", "main")
+    .eq("sport", "run")
+    .limit(1)
+    .maybeSingle();
+  if (oldGoal) {
+    await supabase
+      .from("goals")
+      .update({ status: "abandoned" })
+      .eq("id", oldGoal.id);
+  }
+
+  const distanceM = Math.round(input.distanceKm * 1000);
+  const { data: goal, error: goalError } = await supabase
+    .from("goals")
+    .insert({
+      user_id: userId,
+      sport: "run",
+      goal_kind: "main",
+      race_name: input.raceName,
+      distance_m: distanceM,
+      race_date: input.raceDate,
+      target_time_sec: input.targetTimeSec,
+      status: "active",
+    })
+    .select()
+    .single();
+  if (goalError || !goal) {
+    return { error: goalError?.message ?? "Erreur création de l'objectif" };
+  }
+
+  // 2. Mettre à jour le profil avec les disponibilités et le volume.
+  const weeklyAvailability = { run: input.runDays };
+  await supabase
+    .from("profiles")
+    .update({
+      weekly_availability: weeklyAvailability,
+      baseline_weekly_km: input.baselineKm,
+      max_weekly_km: input.maxKm,
+    })
+    .eq("user_id", userId);
+
+  // 3. Lire le profil mis à jour.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!profile) return { error: "Profil introuvable." };
+
+  // 4. Lire l'historique récent.
+  const fourWeeksAgo = new Date();
+  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+  const { data: runs } = await supabase
+    .from("run_sessions")
+    .select("session_date, distance_m, duration_min, duration_sec, avg_pace_sec, avg_hr")
+    .eq("user_id", userId)
+    .gte("session_date", fourWeeksAgo.toISOString().slice(0, 10))
+    .order("session_date", { ascending: true });
+
+  const history = (runs ?? []).map((r) => ({
+    date: r.session_date,
+    distanceM: r.distance_m,
+    durationSec: r.duration_sec ?? (r.duration_min ? r.duration_min * 60 : null),
+    avgPaceSecPerKm: r.avg_pace_sec,
+    avgHr: r.avg_hr,
+  }));
+
+  // 5. Lire les checkins et blessures.
+  const { data: checkins } = await supabase
+    .from("daily_checkins")
+    .select("checkin_date, freshness_1_5")
+    .eq("user_id", userId)
+    .gte("checkin_date", fourWeeksAgo.toISOString().slice(0, 10));
+  const checkinInput = (checkins ?? []).map((c) => ({
+    date: c.checkin_date,
+    freshness: c.freshness_1_5,
+  }));
+
+  const { data: injuries } = await supabase
+    .from("injuries")
+    .select("status, body_area")
+    .eq("user_id", userId);
+  const injuryInput = (injuries ?? []).map((i) => ({
+    status: i.status,
+    bodyArea: i.body_area,
+  }));
+
+  // 6. Construire le profil input.
+  const profileInput = {
+    birthDate: profile.birth_date,
+    sex: profile.sex as "female" | "male" | "other" | "prefer_not_to_say" | null,
+    hrMax: profile.hr_max,
+    hrRest: profile.resting_hr,
+    baselineWeeklyKm: input.baselineKm,
+    maxWeeklyKm: input.maxKm,
+    experienceLevel: profile.experience_level as "beginner" | "intermediate" | "advanced" | null,
+    weeklyAvailability: { run: input.runDays } as Record<string, string[] | undefined>,
+    declaredEasyPaceSecPerKm: input.easyPaceSecPerKm,
+  };
+
+  const goalInput = {
+    distanceM: goal.distance_m,
+    raceDate: goal.race_date,
+    targetTimeSec: goal.target_time_sec,
+  };
+
+  const planInput: PlanInput = {
+    profile: profileInput,
+    goal: goalInput,
+    history,
+    checkins: checkinInput,
+    injuries: injuryInput,
+  };
+
+  const generated = generatePlan(planInput);
+
+  const startDate = new Date().toISOString().slice(0, 10);
+  const endDate = goal.race_date;
+
+  // 7. Créer le plan.
+  const { data: plan, error: planError } = await supabase
+    .from("training_plans")
+    .insert({
+      user_id: userId,
+      goal_id: goal.id,
+      name: `${input.raceName} — ${input.distanceKm} km`,
+      status: "active",
+      start_date: startDate,
+      end_date: endDate,
+      vdot: generated.vdot.value,
+      vdot_source: generated.vdot.source,
+      vdot_is_estimated: generated.vdot.isEstimated,
+      reference_volume_km: generated.referenceVolumeKm,
+      notes_text: null,
+    })
+    .select()
+    .single();
+
+  if (planError || !plan) {
+    return { error: planError?.message ?? "Erreur création du plan" };
+  }
+
+  // 8. Insérer les règles.
+  if (generated.rules.length > 0) {
+    await supabase.from("plan_rules").insert(
+      generated.rules.map((r) => ({
+        plan_id: plan.id,
+        rule_key: r.key,
+        rule_value: r.value,
+        explanation: r.explanation,
+      })),
+    );
+  }
+
+  // 9. Insérer les sessions et synchroniser vers planned_sessions.
+  for (const s of generated.sessions) {
+    const { data: ps } = await supabase
+      .from("plan_sessions")
+      .insert({
+        plan_id: plan.id,
+        user_id: userId,
+        session_date: s.sessionDate,
+        sport: s.sport,
+        session_type: s.sessionType,
+        duration_min: s.durationMin,
+        distance_m: s.distanceM,
+        target_zone: s.targetZone,
+        target_pace_sec_per_km: s.targetPaceSecPerKm,
+        rationale_text: s.rationaleText,
+        recalculation_reason: s.recalculationReason,
+        status: "planned",
+      })
+      .select()
+      .single();
+
+    if (ps) {
+      const { data: planned } = await supabase
+        .from("planned_sessions")
+        .insert({
+          user_id: userId,
+          date: s.sessionDate,
+          sport: "run",
+          session_type: s.sessionType,
+          duration_min: s.durationMin,
+          objectives_json: {},
+          details_json: { target_zone: s.targetZone, target_pace: s.targetPaceSecPerKm },
+          brief_text: s.rationaleText,
+          rationale_text: s.rationaleText,
+          origin: "engine",
+          status: "planned",
+        })
+        .select()
+        .single();
+
+      if (planned) {
+        await supabase
+          .from("plan_sessions")
+          .update({ planned_session_id: planned.id })
+          .eq("id", ps.id);
+      }
+    }
+  }
+
+  revalidatePath("/plan");
+  revalidatePath("/");
+  return { planId: plan.id };
+}
+
 export async function getActivePlan() {
   const supabase = await createSupabaseServerClient();
   const { data: userData } = await supabase.auth.getUser();
