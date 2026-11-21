@@ -15,9 +15,10 @@ export type CreatePlanInput = {
 };
 
 export type CreatePlanInteractiveInput = {
-  raceName: string;
-  distanceKm: number;
-  raceDate: string;
+  targetDistanceKm: number;
+  hasRace: boolean;
+  raceName: string | null;
+  raceDate: string | null;
   targetTimeSec: number | null;
   easyPaceSecPerKm: number | null;
   runDays: string[];
@@ -43,40 +44,61 @@ export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
     return { error: "Un plan est déjà actif. Arrête-le d'abord." };
   }
 
-  // 1. Créer l'objectif principal (abandonner l'ancien).
-  const { data: oldGoal } = await supabase
-    .from("goals")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .eq("goal_kind", "main")
-    .eq("sport", "run")
-    .limit(1)
-    .maybeSingle();
-  if (oldGoal) {
-    await supabase
+  // 1. Créer l'objectif principal si course prévue (abandonner l'ancien).
+  let goal: { id: string; distance_m: number; race_date: string; target_time_sec: number | null } | null = null;
+  if (input.hasRace && input.raceDate) {
+    const { data: oldGoal } = await supabase
       .from("goals")
-      .update({ status: "abandoned" })
-      .eq("id", oldGoal.id);
-  }
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .eq("goal_kind", "main")
+      .eq("sport", "run")
+      .limit(1)
+      .maybeSingle();
+    if (oldGoal) {
+      await supabase
+        .from("goals")
+        .update({ status: "abandoned" })
+        .eq("id", oldGoal.id);
+    }
 
-  const distanceM = Math.round(input.distanceKm * 1000);
-  const { data: goal, error: goalError } = await supabase
-    .from("goals")
-    .insert({
-      user_id: userId,
-      sport: "run",
-      goal_kind: "main",
-      race_name: input.raceName,
-      distance_m: distanceM,
-      race_date: input.raceDate,
-      target_time_sec: input.targetTimeSec,
-      status: "active",
-    })
-    .select()
-    .single();
-  if (goalError || !goal) {
-    return { error: goalError?.message ?? "Erreur création de l'objectif" };
+    const distanceM = Math.round(input.targetDistanceKm * 1000);
+    const { data: newGoal, error: goalError } = await supabase
+      .from("goals")
+      .insert({
+        user_id: userId,
+        sport: "run",
+        goal_kind: "main",
+        race_name: input.raceName ?? "Course",
+        distance_m: distanceM,
+        race_date: input.raceDate,
+        target_time_sec: input.targetTimeSec,
+        status: "active",
+      })
+      .select()
+      .single();
+    if (goalError || !newGoal) {
+      return { error: goalError?.message ?? "Erreur création de l'objectif" };
+    }
+    goal = newGoal;
+  } else {
+    // Abandonner l'ancien objectif principal s'il existe (le plan n'est plus lié à une course).
+    const { data: oldGoal } = await supabase
+      .from("goals")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .eq("goal_kind", "main")
+      .eq("sport", "run")
+      .limit(1)
+      .maybeSingle();
+    if (oldGoal) {
+      await supabase
+        .from("goals")
+        .update({ status: "abandoned" })
+        .eq("id", oldGoal.id);
+    }
   }
 
   // 2. Mettre à jour le profil avec les disponibilités et le volume.
@@ -149,11 +171,9 @@ export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
     declaredEasyPaceSecPerKm: input.easyPaceSecPerKm,
   };
 
-  const goalInput = {
-    distanceM: goal.distance_m,
-    raceDate: goal.race_date,
-    targetTimeSec: goal.target_time_sec,
-  };
+  const goalInput = goal
+    ? { distanceM: goal.distance_m, raceDate: goal.race_date, targetTimeSec: goal.target_time_sec }
+    : null;
 
   const planInput: PlanInput = {
     profile: profileInput,
@@ -166,15 +186,17 @@ export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
   const generated = generatePlan(planInput);
 
   const startDate = new Date().toISOString().slice(0, 10);
-  const endDate = goal.race_date;
+  const endDate = goal
+    ? goal.race_date
+    : new Date(Date.now() + 28 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
   // 7. Créer le plan.
   const { data: plan, error: planError } = await supabase
     .from("training_plans")
     .insert({
       user_id: userId,
-      goal_id: goal.id,
-      name: `${input.raceName} — ${input.distanceKm} km`,
+      goal_id: goal?.id ?? null,
+      name: goal ? `${input.raceName ?? "Course"} — ${input.targetDistanceKm} km` : `Plan ${input.targetDistanceKm} km`,
       status: "active",
       start_date: startDate,
       end_date: endDate,

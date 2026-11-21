@@ -27,7 +27,7 @@
 | --- | --- |
 | **Version** | **V2.1 « Génération de plan course » — en cours** (2026-11-20) |
 | **Date** | 2026-11-20 |
-| **Dernière action** | V2.1 amélioré : assistant de création interactif (objectif, niveau, disponibilités, volume) au lieu d'un renvoi vers les réglages. `createPlanInteractive` crée l'objectif + met à jour le profil + génère le plan. `typecheck`, `lint`, `build` passent. |
+| **Dernière action** | V2.1 amélioré : assistant demande d'abord la distance cible, puis si course prévue (pour ajuster la durée/intensité). `createPlanInteractive` gère le cas sans course (plan générique). `typecheck`, `lint`, `build` passent. |
 | **Prochaine action** | Tester la création d'un plan avec un vrai compte, puis V2.2 (adaptation avancée) et V2.3 (charge). |
 | **Blocage** | Aucun côté code. Migration V9 à appliquer dans Supabase pour activer les tables. |
 | **Vérifications** | `npm run typecheck`, `npm run lint`, `npm run build` passent. |
