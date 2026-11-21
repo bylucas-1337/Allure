@@ -20,9 +20,13 @@ export type CreatePlanInteractiveInput = {
   raceName: string | null;
   raceDate: string | null;
   targetTimeSec: number | null;
+  levelMode: "auto" | "records" | "paces";
+  records: { distance: number; timeSec: number }[];
   easyPaceSecPerKm: number | null;
+  thresholdPaceSecPerKm: number | null;
   runDays: string[];
   longRunDay: string;
+  volumeMode: "auto" | "manual";
   baselineKm: number;
   maxKm: number;
 };
@@ -107,8 +111,8 @@ export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
     .from("profiles")
     .update({
       weekly_availability: weeklyAvailability,
-      baseline_weekly_km: input.baselineKm,
-      max_weekly_km: input.maxKm,
+      baseline_weekly_km: input.volumeMode === "auto" ? null : input.baselineKm,
+      max_weekly_km: input.volumeMode === "auto" ? null : input.maxKm,
     })
     .eq("user_id", userId);
 
@@ -138,6 +142,22 @@ export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
     avgHr: r.avg_hr,
   }));
 
+  // Ajouter les records saisis manuellement (comme des séances récentes pour le calcul VDOT).
+  if (input.levelMode === "records") {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const rec of input.records) {
+      if (rec.timeSec > 0) {
+        history.push({
+          date: today,
+          distanceM: rec.distance,
+          durationSec: rec.timeSec,
+          avgPaceSecPerKm: Math.round(rec.timeSec / (rec.distance / 1000)),
+          avgHr: null,
+        });
+      }
+    }
+  }
+
   // 5. Lire les checkins et blessures.
   const { data: checkins } = await supabase
     .from("daily_checkins")
@@ -164,11 +184,11 @@ export async function createPlanInteractive(input: CreatePlanInteractiveInput) {
     sex: profile.sex as "female" | "male" | "other" | "prefer_not_to_say" | null,
     hrMax: profile.hr_max,
     hrRest: profile.resting_hr,
-    baselineWeeklyKm: input.baselineKm,
-    maxWeeklyKm: input.maxKm,
+    baselineWeeklyKm: input.volumeMode === "auto" ? null : input.baselineKm,
+    maxWeeklyKm: input.volumeMode === "auto" ? null : input.maxKm,
     experienceLevel: profile.experience_level as "beginner" | "intermediate" | "advanced" | null,
     weeklyAvailability: { run: input.runDays } as Record<string, string[] | undefined>,
-    declaredEasyPaceSecPerKm: input.easyPaceSecPerKm,
+    declaredEasyPaceSecPerKm: input.levelMode === "paces" ? input.easyPaceSecPerKm : null,
   };
 
   const goalInput = goal
